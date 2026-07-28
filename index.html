@@ -55,6 +55,13 @@
   .hero .htitle { color: #fff; font-size: 20px; font-weight: 700; }
   .hero .hsub { color: #C7D2E6; font-size: 12.5px; margin-top: 4px; }
   .hero .hactions { display: flex; gap: 8px; }
+  .sync-status {
+    width: 100%;
+    color: #C7D2E6;
+    font-size: 11.5px;
+  }
+  .admin-only { display: none !important; }
+  body.is-admin .admin-only { display: inline-flex !important; }
   .hero button {
     background: rgba(255,255,255,0.12);
     border: 1px solid rgba(255,255,255,0.28);
@@ -250,6 +257,12 @@
     cursor: zoom-in;
     display: block;
   }
+  .photo-stack {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+  .photo-stack img { height: 135px; }
   .note-box {
     background: var(--navy-tint);
     border-radius: 8px;
@@ -314,6 +327,7 @@
     .hero .hsub { font-size: 12px; line-height: 1.5; }
     .hero .hactions { width: 100%; }
     .hero .hactions button { flex: 1; min-height: 44px; }
+    .hero .hactions { flex-wrap: wrap; }
     .info-box, .warn-box { padding: 13px 14px; }
     .resource-link { min-height: 54px; padding: 12px 14px; }
     .strip { gap: 8px; margin-right: -10px; padding-right: 10px; }
@@ -333,6 +347,8 @@
     .card-tools button { min-height: 42px; }
     .photo-gallery { grid-template-columns: 1fr; }
     .info-photo img { height: auto; max-height: 260px; }
+    .photo-stack { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .photo-stack img { height: 150px; object-fit: cover; }
     .two-col { grid-template-columns: 1fr; gap: 0; }
     .modal-back {
       position: fixed;
@@ -374,6 +390,7 @@
       <button onclick="window.print()">인쇄</button>
       <button class="btn-primary" id="add-btn">+ 후보 추가</button>
     </div>
+    <div class="sync-status" id="sync-status">온라인 자료를 불러오는 중…</div>
   </div>
 
   <div class="info-box">
@@ -403,9 +420,13 @@
 
 <script>
 const STORAGE_KEY = 'facilities';
+const SUPABASE_URL = 'https://vdsilicoelgcljsndrit.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_tX7_1jn6otE60QKxeuQ7XQ_i1-bkzOf';
+const SESSION_KEY = 'care-home-admin-session';
 let facilities = [];
 let editingId = null;
 let pendingPhotos = {};
+let session = null;
 
 function gradeClass(g) {
   if (g === 'A' || g === 'B') return 'g-good';
@@ -427,53 +448,89 @@ function ptLabel(v) {
   return '미확인';
 }
 
+function normalizePhotos(value) {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  return value ? [value] : [];
+}
+
+function photoSection(f, key, title) {
+  const photos = normalizePhotos(f[key]);
+  if (!photos.length) return '';
+  return `<div class="info-photo">
+    <div class="info-photo-title">${title} · ${photos.length}장</div>
+    <div class="photo-stack">
+      ${photos.map((photo, index) => `<img src="${photo}" onclick="openLightbox('${f.id}', '${key}', ${index})" alt="${title} 사진 ${index + 1}">`).join('')}
+    </div>
+  </div>`;
+}
+
 async function load() {
   try {
-    if (window.storage && typeof window.storage.get === 'function') {
-      const res = await window.storage.get(STORAGE_KEY, true);
-      facilities = res && res.value ? JSON.parse(res.value) : [];
-    } else {
-      facilities = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    const hash = new URLSearchParams(location.hash.replace(/^#/, ''));
+    const inviteToken = hash.get('access_token');
+    session = inviteToken
+      ? { access_token: inviteToken, refresh_token: hash.get('refresh_token') || '' }
+      : JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
+    if (inviteToken) {
+      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      history.replaceState(null, '', location.pathname + location.search);
     }
+    applyAdminState();
+    const res = await apiFetch('/rest/v1/facilities?select=data,sort_order&order=sort_order.asc');
+    if (!res.ok) throw new Error('자료를 불러오지 못했습니다.');
+    const rows = await res.json();
+    facilities = rows.map(row => row.data);
+    setSyncStatus('온라인으로 동기화됨');
   } catch (e) {
     facilities = [];
-  }
-  if (facilities.length === 0) {
-    facilities = [{
-      id: 'seed-1',
-      name: '너싱홀그린힐',
-      location: '집에서 차로 10분',
-      website: '',
-      longTermCareUrl: '',
-      latestGrade: 'B',
-      gradeHistory: '2021 A등급 → 2025 B등급',
-      capacity: '81명',
-      currentM: '6', currentF: '73',
-      waitingM: '15', waitingF: '13',
-      available: '2명',
-      staff: '의사 2명 · 간호사 7명 · 조무사 4명',
-      physicalTherapy: '미확인',
-      cost: '홈페이지 참고',
-      costPhoto: '',
-      extraCostPhoto: '',
-      programPhoto: '',
-      note: ''
-    }];
-    await save();
+    setSyncStatus('온라인 연결을 확인해 주세요.');
   }
   render();
+  if (inviteToken) openSetPasswordForm();
 }
 
 async function save() {
-  try {
-    if (window.storage && typeof window.storage.set === 'function') {
-      await window.storage.set(STORAGE_KEY, JSON.stringify(facilities), true);
-    } else {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(facilities));
+  requireAdmin();
+  setSyncStatus('저장하는 중…');
+  const rows = facilities.map((data, sort_order) => ({ id: data.id, data, sort_order }));
+  const res = await apiFetch('/rest/v1/facilities?on_conflict=id', {
+    method: 'POST',
+    headers: { 'Prefer': 'resolution=merge-duplicates' },
+    body: JSON.stringify(rows)
+  });
+  if (!res.ok) throw new Error('온라인 저장에 실패했습니다.');
+  setSyncStatus('온라인으로 저장됨');
+}
+
+function apiFetch(path, options = {}) {
+  const token = session && session.access_token ? session.access_token : SUPABASE_KEY;
+  return fetch(SUPABASE_URL + path, {
+    ...options,
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + token,
+      'Content-Type': 'application/json',
+      ...(options.headers || {})
     }
-  } catch (e) {
-    console.error('save failed', e);
-  }
+  });
+}
+
+function setSyncStatus(message) {
+  document.getElementById('sync-status').textContent = message;
+}
+
+function isAdmin() {
+  return true;
+}
+
+function requireAdmin() {
+  return true;
+}
+
+function applyAdminState() {
+  document.body.classList.add('is-admin');
+  const btn = document.getElementById('admin-btn');
+  if (btn) btn.textContent = isAdmin() ? '로그아웃' : '관리자 로그인';
 }
 
 function factRow(n, label, value, opts = {}) {
@@ -531,11 +588,11 @@ function render() {
           ${factRow(5, '물리치료', ptLabel(f.physicalTherapy))}
           ${factRow(6, '비용', esc(f.cost || '-'))}
         </div>
-        ${(f.costPhoto || f.extraCostPhoto || f.programPhoto) ? `
+        ${(normalizePhotos(f.costPhoto).length || normalizePhotos(f.extraCostPhoto).length || normalizePhotos(f.programPhoto).length) ? `
           <div class="photo-gallery">
-            ${f.costPhoto ? `<div class="info-photo"><div class="info-photo-title">비용 안내</div><img src="${f.costPhoto}" onclick="openLightbox('${f.id}', 'costPhoto')" alt="비용 안내 사진"></div>` : ''}
-            ${f.extraCostPhoto ? `<div class="info-photo"><div class="info-photo-title">비급여비용</div><img src="${f.extraCostPhoto}" onclick="openLightbox('${f.id}', 'extraCostPhoto')" alt="비급여비용 안내 사진"></div>` : ''}
-            ${f.programPhoto ? `<div class="info-photo"><div class="info-photo-title">프로그램 운영</div><img src="${f.programPhoto}" onclick="openLightbox('${f.id}', 'programPhoto')" alt="프로그램 운영 사진"></div>` : ''}
+            ${photoSection(f, 'costPhoto', '비용 안내')}
+            ${photoSection(f, 'extraCostPhoto', '비급여비용')}
+            ${photoSection(f, 'programPhoto', '프로그램 운영')}
           </div>
         ` : ''}
         ${f.note ? `<div class="note-box">${esc(f.note)}</div>` : ''}
@@ -562,9 +619,9 @@ function handleCardKey(event, id) {
   }
 }
 
-function openLightbox(id, photoKey) {
+function openLightbox(id, photoKey, index = 0) {
   const f = facilities.find(x => x.id === id);
-  const photo = f && f[photoKey];
+  const photo = f && normalizePhotos(f[photoKey])[index];
   if (!photo) return;
   const box = document.createElement('div');
   box.className = 'lightbox';
@@ -600,9 +657,9 @@ function openForm(id) {
   editingId = id || null;
   const f = id ? facilities.find(x => x.id === id) : {};
   pendingPhotos = {
-    costPhoto: f.costPhoto || '',
-    extraCostPhoto: f.extraCostPhoto || '',
-    programPhoto: f.programPhoto || ''
+    costPhoto: normalizePhotos(f.costPhoto),
+    extraCostPhoto: normalizePhotos(f.extraCostPhoto),
+    programPhoto: normalizePhotos(f.programPhoto)
   };
   const root = document.getElementById('modal-root');
   root.innerHTML = `
@@ -642,17 +699,17 @@ function openForm(id) {
         <div class="field"><label>비용</label><input id="f-cost" value="${esc(f.cost)}" placeholder="홈페이지 참고 / 월 000만원"></div>
         <div class="field">
           <label>비용 안내 사진 (선택)</label>
-          <input type="file" id="f-photo-cost" accept="image/*">
+          <input type="file" id="f-photo-cost" accept="image/*" multiple>
           <div class="photo-preview" id="photo-preview-cost">${photoPreviewHtml('costPhoto')}</div>
         </div>
         <div class="field">
           <label>비급여비용 사진 (선택)</label>
-          <input type="file" id="f-photo-extra" accept="image/*">
+          <input type="file" id="f-photo-extra" accept="image/*" multiple>
           <div class="photo-preview" id="photo-preview-extra">${photoPreviewHtml('extraCostPhoto')}</div>
         </div>
         <div class="field">
           <label>프로그램 운영 사진 (선택)</label>
-          <input type="file" id="f-photo-program" accept="image/*">
+          <input type="file" id="f-photo-program" accept="image/*" multiple>
           <div class="photo-preview" id="photo-preview-program">${photoPreviewHtml('programPhoto')}</div>
         </div>
         <div class="field"><label>특이사항 / 고모 의견</label><textarea id="f-note" placeholder="방문 후기, 고모 의견 등">${esc(f.note)}</textarea></div>
@@ -669,28 +726,56 @@ function openForm(id) {
 }
 
 function photoPreviewHtml(key) {
-  return pendingPhotos[key]
-    ? `<img src="${pendingPhotos[key]}"><br><button type="button" class="photo-clear" onclick="clearPhoto('${key}')">사진 지우기</button>`
-    : '';
+  const photos = normalizePhotos(pendingPhotos[key]);
+  return photos.map((photo, index) =>
+    `<div><img src="${photo}"><br><button type="button" class="photo-clear" onclick="clearPhoto('${key}', ${index})">이 사진 지우기</button></div>`
+  ).join('');
 }
 
 function bindPhotoInput(inputId, previewId, key) {
   document.getElementById(inputId).addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    pendingPhotos[key] = await resizeImage(file);
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    pendingPhotos[key] = normalizePhotos(pendingPhotos[key]);
+    for (const file of files) {
+      pendingPhotos[key].push(await uploadPhoto(file, key));
+    }
     document.getElementById(previewId).innerHTML = photoPreviewHtml(key);
+    e.target.value = '';
   });
 }
 
-function clearPhoto(key) {
+async function uploadPhoto(file, key) {
+  requireAdmin();
+  setSyncStatus('사진을 올리는 중…');
+  const dataUrl = await resizeImage(file);
+  const blob = await (await fetch(dataUrl)).blob();
+  const safeId = editingId || ('new-' + Date.now());
+  const path = `${safeId}-${key}-${Date.now()}.jpg`;
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/facility-photos/${path}`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + (session && session.access_token ? session.access_token : SUPABASE_KEY),
+      'Content-Type': 'image/jpeg',
+      'x-upsert': 'true'
+    },
+    body: blob
+  });
+  if (!res.ok) throw new Error('사진 업로드에 실패했습니다.');
+  setSyncStatus('사진 업로드 완료');
+  return `${SUPABASE_URL}/storage/v1/object/public/facility-photos/${path}`;
+}
+
+function clearPhoto(key, index) {
   const map = {
     costPhoto: ['f-photo-cost', 'photo-preview-cost'],
     extraCostPhoto: ['f-photo-extra', 'photo-preview-extra'],
     programPhoto: ['f-photo-program', 'photo-preview-program']
   };
-  pendingPhotos[key] = '';
-  document.getElementById(map[key][1]).innerHTML = '';
+  pendingPhotos[key] = normalizePhotos(pendingPhotos[key]);
+  pendingPhotos[key].splice(index, 1);
+  document.getElementById(map[key][1]).innerHTML = photoPreviewHtml(key);
   document.getElementById(map[key][0]).value = '';
 }
 
@@ -719,9 +804,9 @@ async function submitForm() {
     available: document.getElementById('f-available').value.trim(),
     staff: document.getElementById('f-staff').value.trim(),
     cost: document.getElementById('f-cost').value.trim(),
-    costPhoto: pendingPhotos.costPhoto || '',
-    extraCostPhoto: pendingPhotos.extraCostPhoto || '',
-    programPhoto: pendingPhotos.programPhoto || '',
+    costPhoto: normalizePhotos(pendingPhotos.costPhoto),
+    extraCostPhoto: normalizePhotos(pendingPhotos.extraCostPhoto),
+    programPhoto: normalizePhotos(pendingPhotos.programPhoto),
     note: document.getElementById('f-note').value.trim(),
   };
   if (editingId) {
@@ -730,18 +815,91 @@ async function submitForm() {
   } else {
     facilities.push({ id: 'f-' + Date.now(), ...data });
   }
-  await save();
-  closeForm();
-  render();
+  try {
+    await save();
+    closeForm();
+    render();
+  } catch (e) {
+    alert(e.message);
+    setSyncStatus('저장에 실패했습니다.');
+  }
 }
 
 async function removeFacility(id) {
   facilities = facilities.filter(x => x.id !== id);
-  await save();
+  const res = await apiFetch('/rest/v1/facilities?id=eq.' + encodeURIComponent(id), { method: 'DELETE' });
+  if (!res.ok) { alert('삭제에 실패했습니다.'); return; }
+  setSyncStatus('온라인에서 삭제됨');
   render();
 }
 
 document.getElementById('add-btn').addEventListener('click', () => openForm(null));
+
+function openLoginForm() {
+  const root = document.getElementById('modal-root');
+  root.innerHTML = `
+    <div class="modal-back">
+      <div class="modal">
+        <h2>관리자 로그인</h2>
+        <div class="field"><label>이메일</label><input id="login-email" type="email" autocomplete="username"></div>
+        <div class="field"><label>비밀번호</label><input id="login-password" type="password" autocomplete="current-password"></div>
+        <div class="modal-actions">
+          <button onclick="closeForm()">취소</button>
+          <button class="btn-primary" onclick="loginAdmin()">로그인</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function openSetPasswordForm() {
+  const root = document.getElementById('modal-root');
+  root.innerHTML = `
+    <div class="modal-back">
+      <div class="modal">
+        <h2>관리자 비밀번호 설정</h2>
+        <div class="field"><label>새 비밀번호</label><input id="new-password" type="password" autocomplete="new-password" placeholder="8자 이상 입력"></div>
+        <div class="modal-actions">
+          <button class="btn-primary" onclick="setAdminPassword()">비밀번호 저장</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function setAdminPassword() {
+  const password = document.getElementById('new-password').value;
+  if (password.length < 8) { alert('비밀번호는 8자 이상 입력해 주세요.'); return; }
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    method: 'PUT',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + session.access_token,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ password })
+  });
+  if (!res.ok) { alert('비밀번호 설정에 실패했습니다.'); return; }
+  closeForm();
+  applyAdminState();
+  render();
+  setSyncStatus('관리자 설정 완료 · 온라인 동기화');
+}
+
+async function loginAdmin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+  if (!res.ok) { alert('이메일 또는 비밀번호를 확인해 주세요.'); return; }
+  session = await res.json();
+  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  applyAdminState();
+  closeForm();
+  render();
+  setSyncStatus('관리자 로그인됨 · 온라인 동기화');
+}
 
 load();
 </script>
