@@ -444,6 +444,7 @@ async function load() {
       name: '너싱홀그린힐',
       location: '집에서 차로 10분',
       website: '',
+      longTermCareUrl: '',
       latestGrade: 'B',
       gradeHistory: '2021 A등급 → 2025 B등급',
       capacity: '81명',
@@ -513,7 +514,7 @@ function render() {
            onkeydown="handleCardKey(event, '${f.id}')">
         <div class="card-head-main">
           <div class="fname">${esc(f.name)}</div>
-          <div class="floc">${esc(f.location || '위치 미입력')}${f.website ? ' · <span class="flink"><a href="'+esc(fullUrl(f.website))+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">'+esc(f.website)+'</a></span>' : ''}</div>
+          <div class="floc">${esc(f.location || '위치 미입력')}${f.website ? ' · <span class="flink"><a href="'+esc(fullUrl(f.website))+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">홈페이지</a></span>' : ''}${f.longTermCareUrl ? ' · <span class="flink"><a href="'+esc(fullUrl(f.longTermCareUrl))+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">장기요양 상세보기</a></span>' : ''}</div>
         </div>
         <div class="card-head-side">
           <span class="pill">입소가능 ${esc(f.available || '-')}</span>
@@ -613,6 +614,7 @@ function openForm(id) {
           <div class="field"><label>위치 / 거리</label><input id="f-location" value="${esc(f.location)}" placeholder="집에서 차로 10분"></div>
           <div class="field"><label>홈페이지</label><input id="f-website" value="${esc(f.website)}" placeholder="example.com"></div>
         </div>
+        <div class="field"><label>장기요양기관 상세페이지 주소</label><input id="f-longterm-url" value="${esc(f.longTermCareUrl)}" placeholder="longtermcare.or.kr의 해당 요양원 상세주소"></div>
         <div class="two-col">
           <div class="field"><label>최신 평가등급</label>
             <select id="f-grade">
@@ -705,6 +707,7 @@ async function submitForm() {
     name,
     location: document.getElementById('f-location').value.trim(),
     website: document.getElementById('f-website').value.trim(),
+    longTermCareUrl: document.getElementById('f-longterm-url').value.trim(),
     latestGrade: document.getElementById('f-grade').value,
     physicalTherapy: document.getElementById('f-pt').value,
     gradeHistory: document.getElementById('f-gradehistory').value.trim(),
