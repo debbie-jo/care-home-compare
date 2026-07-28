@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>요양원 후보 비교</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #F3F5F8;
+    --card: #FFFFFF;
+    --ink: #23262B;
+    --ink-soft: #6B7280;
+    --line: #E4E7EC;
+    --navy: #1F3864;
+    --navy-deep: #16294D;
+    --navy-tint: #E9EDF5;
+    --green: #2E9E5B;
+    --green-tint: #E5F5EA;
+    --amber-bg: #FFF7DA;
+    --amber-border: #EFC94C;
+    --amber-text: #7A5B10;
+    --grade-good: #2E9E5B;
+    --grade-good-tint: #E5F5EA;
+    --grade-mid: #B08228;
+    --grade-mid-tint: #FBF1DA;
+    --grade-low: #C0392B;
+    --grade-low-tint: #FAE4E1;
+    --grade-none: #8A8F98;
+    --grade-none-tint: #EEF0F2;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Noto Sans KR', sans-serif;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 28px 20px 80px; }
+
+  .hero {
+    background: var(--navy);
+    border-radius: 12px;
+    padding: 18px 22px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .hero .htitle { color: #fff; font-size: 20px; font-weight: 700; }
+  .hero .hsub { color: #C7D2E6; font-size: 12.5px; margin-top: 4px; }
+  .hero .hactions { display: flex; gap: 8px; }
+  .hero button {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.28);
+    color: #fff;
+  }
+  .hero button:hover { background: rgba(255,255,255,0.22); }
+  .hero .btn-primary { background: #fff; color: var(--navy); border-color: #fff; font-weight: 700; }
+  .hero .btn-primary:hover { background: #EDF1F8; }
+
+  button {
+    font-family: 'Noto Sans KR', sans-serif;
+    cursor: pointer;
+    border-radius: 7px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    color: var(--ink);
+    font-size: 13px;
+    padding: 9px 14px;
+    transition: background .15s, border-color .15s;
+  }
+
+  .info-box {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+  .info-box .it { color: var(--ink); font-weight: 700; font-size: 13px; margin-bottom: 6px; }
+  .info-box div.line { margin: 3px 0; }
+  .info-box div.line b { color: var(--ink); font-weight: 500; }
+
+  .warn-box {
+    background: var(--amber-bg);
+    border: 1px solid var(--amber-border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 22px;
+    font-size: 13px;
+    color: var(--amber-text);
+  }
+  .warn-box .wt { font-weight: 700; margin-bottom: 6px; }
+  .warn-box div.line { margin: 3px 0; }
+
+  .resource-link {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 13px 16px;
+    margin-bottom: 18px;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .resource-link:hover { border-color: var(--navy); }
+  .resource-link .resource-title { color: var(--navy); font-size: 13px; font-weight: 700; }
+  .resource-link .resource-desc { color: var(--ink-soft); font-size: 12px; margin-top: 2px; }
+  .resource-link .resource-arrow { color: var(--navy); font-size: 18px; font-weight: 700; }
+
+  .strip {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 2px 2px 14px;
+  }
+  .chip {
+    flex: 0 0 auto;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 14px;
+    min-width: 128px;
+    cursor: pointer;
+  }
+  .chip:hover { border-color: var(--navy); }
+  .chip .name { font-weight: 500; font-size: 13px; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
+  .chip .avail { font-size: 12px; color: var(--ink-soft); }
+  .chip .avail b { color: var(--green); font-weight: 700; }
+
+  .cards { display: flex; flex-direction: column; gap: 16px; margin-top: 6px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .card-head {
+    background: var(--navy);
+    padding: 13px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .card-head:focus-visible { outline: 3px solid var(--amber-border); outline-offset: -3px; }
+  .card-head-main { flex: 1; min-width: 0; }
+  .card-head-side { display: flex; align-items: center; gap: 10px; }
+  .collapse-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.14);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-size: 16px;
+    transition: transform .2s ease;
+  }
+  .card.collapsed .collapse-icon { transform: rotate(-90deg); }
+  .card.collapsed .card-body { display: none; }
+  .card-head .fname { color: #fff; font-weight: 700; font-size: 16px; }
+  .card-head .floc { color: #C7D2E6; font-size: 12px; margin-top: 2px; }
+  .card-head .flink a { color: #DCE6F5; font-size: 12px; text-decoration: underline; }
+  .pill {
+    background: rgba(255,255,255,0.16);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .card-body { padding: 14px 18px 16px; }
+  .grade-history { font-size: 12px; color: var(--ink-soft); margin-bottom: 12px; }
+
+  .fact-list { display: flex; flex-direction: column; }
+  .fact {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .fact:last-child { border-bottom: none; }
+  .fact .num {
+    flex: 0 0 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--navy-tint);
+    color: var(--navy);
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1px;
+  }
+  .fact .ftext { flex: 1; }
+  .fact .flabel { font-size: 13.5px; font-weight: 500; color: var(--ink); }
+  .fact .fvalue { font-size: 12.5px; color: var(--ink-soft); margin-top: 1px; }
+  .fact .fvalue.strong { color: var(--green); font-weight: 700; }
+  .fact-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+    align-self: center;
+  }
+  .g-good { background: var(--grade-good-tint); color: var(--grade-good); }
+  .g-mid { background: var(--grade-mid-tint); color: var(--grade-mid); }
+  .g-low { background: var(--grade-low-tint); color: var(--grade-low); }
+  .g-none { background: var(--grade-none-tint); color: var(--grade-none); }
+
+  .photo-gallery {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .info-photo { min-width: 0; }
+  .info-photo-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 5px;
+  }
+  .info-photo img {
+    width: 100%;
+    height: 180px;
+    object-fit: contain;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    cursor: zoom-in;
+    display: block;
+  }
+  .note-box {
+    background: var(--navy-tint);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-top: 12px;
+    color: var(--navy-deep);
+  }
+  .card-tools { display: flex; gap: 6px; justify-content: flex-end; margin-top: 14px; }
+  .card-tools button { padding: 6px 12px; font-size: 12px; }
+
+  .empty {
+    text-align: center;
+    padding: 50px 20px;
+    color: var(--ink-soft);
+    font-size: 14px;
+    border: 1px dashed var(--line);
+    border-radius: 12px;
+    background: var(--card);
+  }
+
+  .modal-back {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    background: rgba(22,41,77,0.45);
+    padding: 30px 16px;
+    border-radius: 12px;
+    margin-top: 18px;
+  }
+  .modal { background: var(--card); border-radius: 12px; padding: 22px; width: 100%; max-width: 520px; }
+  .modal h2 { font-size: 17px; margin: 0 0 16px; color: var(--navy); font-weight: 700; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 12px; color: var(--ink-soft); margin-bottom: 4px; }
+  .field input, .field select, .field textarea {
+    width: 100%;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 14px;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: var(--paper);
+    color: var(--ink);
+  }
+  .field textarea { resize: vertical; min-height: 50px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+  .modal-actions .btn-primary { background: var(--navy); border-color: var(--navy); color: #fff; font-weight: 500; }
+  .photo-preview { margin-top: 8px; }
+  .photo-preview img { max-width: 100%; max-height: 140px; border-radius: 7px; border: 1px solid var(--line); }
+  .photo-clear { font-size: 12px; color: var(--ink-soft); margin-top: 4px; background: none; border: none; padding: 0; text-decoration: underline; }
+  .lightbox {
+    position: fixed; inset: 0; background: rgba(15,20,30,0.82);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 999; padding: 24px; cursor: zoom-out;
+  }
+  .lightbox img { max-width: 100%; max-height: 100%; border-radius: 8px; }
+  @media (max-width: 600px) {
+    .wrap { padding: 12px 10px 48px; }
+    .hero { padding: 16px; border-radius: 10px; align-items: stretch; }
+    .hero .htitle { font-size: 19px; }
+    .hero .hsub { font-size: 12px; line-height: 1.5; }
+    .hero .hactions { width: 100%; }
+    .hero .hactions button { flex: 1; min-height: 44px; }
+    .info-box, .warn-box { padding: 13px 14px; }
+    .resource-link { min-height: 54px; padding: 12px 14px; }
+    .strip { gap: 8px; margin-right: -10px; padding-right: 10px; }
+    .chip { min-width: 118px; padding: 9px 12px; }
+    .cards { gap: 12px; }
+    .card-head { padding: 14px; align-items: flex-start; }
+    .card-head .fname { font-size: 15px; }
+    .card-head .floc { overflow-wrap: anywhere; }
+    .card-head-side { gap: 7px; }
+    .pill { padding: 4px 9px; font-size: 11px; }
+    .collapse-icon { width: 26px; height: 26px; }
+    .card-body { padding: 12px 14px 14px; }
+    .fact { gap: 9px; padding: 10px 0; flex-wrap: wrap; }
+    .fact .ftext { min-width: calc(100% - 34px); }
+    .fact-badge { margin-left: 31px; }
+    .card-tools { display: grid; grid-template-columns: 1fr 1fr; }
+    .card-tools button { min-height: 42px; }
+    .photo-gallery { grid-template-columns: 1fr; }
+    .info-photo img { height: auto; max-height: 260px; }
+    .two-col { grid-template-columns: 1fr; gap: 0; }
+    .modal-back {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      margin: 0;
+      padding: 12px 10px;
+      border-radius: 0;
+      overflow-y: auto;
+    }
+    .modal { padding: 18px 14px; margin: auto 0; }
+    .field input, .field select, .field textarea {
+      min-height: 44px;
+      font-size: 16px;
+    }
+    .modal-actions { position: sticky; bottom: 0; background: var(--card); padding-top: 10px; }
+    .modal-actions button { flex: 1; min-height: 44px; }
+    .lightbox { padding: 10px; }
+  }
+  @media print {
+    .hero .hactions, .card-tools, .strip { display: none !important; }
+    .hero { background: #fff !important; border: 1px solid var(--line); }
+    .hero .htitle, .hero .hsub { color: var(--ink) !important; }
+    body { background: #fff; }
+    .card { break-inside: avoid; }
+    .card.collapsed .card-body { display: block !important; }
+    .collapse-icon { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div>
+      <div class="htitle">요양원 후보 비교</div>
+      <div class="hsub">경기도 광주시 권역 · 고모와 상의용</div>
+    </div>
+    <div class="hactions">
+      <button onclick="window.print()">인쇄</button>
+      <button class="btn-primary" id="add-btn">+ 후보 추가</button>
+    </div>
+  </div>
+
+  <div class="info-box">
+    <div class="it">기본 정보</div>
+    <div class="line"><b>대상자 상태</b> · 일상생활 수행 곤란 (예상 등급 1~2등급, 등급 신청 전)</div>
+    <div class="line"><b>희망 지역</b> · 경기도 광주시 및 인근</div>
+  </div>
+
+  <div class="warn-box">
+    <div class="wt">유의사항</div>
+    <div class="line">· 평가등급은 시점 기준이며, 이후 운영 상태가 달라질 수 있어 직접 방문 확인이 필요합니다.</div>
+    <div class="line">· 비용은 급여 본인부담금 외 비급여 항목(식재료비·간식비 등)이 별도로 붙습니다.</div>
+  </div>
+
+  <a class="resource-link" href="https://www.longtermcare.or.kr/npbs/indexr.jsp" target="_blank" rel="noopener">
+    <div>
+      <div class="resource-title">노인장기요양보험 상세내용</div>
+      <div class="resource-desc">제도 안내, 등급 신청, 장기요양기관 정보를 확인할 수 있어요.</div>
+    </div>
+    <span class="resource-arrow" aria-hidden="true">›</span>
+  </a>
+
+  <div id="strip" class="strip"></div>
+  <div id="cards" class="cards"></div>
+  <div id="modal-root"></div>
+</div>
+
+<script>
+const STORAGE_KEY = 'facilities';
+let facilities = [];
+let editingId = null;
+let pendingPhotos = {};
+
+function gradeClass(g) {
+  if (g === 'A' || g === 'B') return 'g-good';
+  if (g === 'C') return 'g-mid';
+  if (g === 'D' || g === 'E') return 'g-low';
+  return 'g-none';
+}
+function gradeLabel(g) { return g && g !== '미평가' ? g + '등급' : '미평가'; }
+function esc(s) {
+  return (s || '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+function fullUrl(u) {
+  if (!u) return '';
+  return /^https?:\/\//i.test(u) ? u : 'https://' + u;
+}
+function ptLabel(v) {
+  if (v === '가능') return '가능';
+  if (v === '불가') return '불가';
+  return '미확인';
+}
+
+async function load() {
+  try {
+    if (window.storage && typeof window.storage.get === 'function') {
+      const res = await window.storage.get(STORAGE_KEY, true);
+      facilities = res && res.value ? JSON.parse(res.value) : [];
+    } else {
+      facilities = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    }
+  } catch (e) {
+    facilities = [];
+  }
+  if (facilities.length === 0) {
+    facilities = [{
+      id: 'seed-1',
+      name: '너싱홀그린힐',
+      location: '집에서 차로 10분',
+      website: '',
+      latestGrade: 'B',
+      gradeHistory: '2021 A등급 → 2025 B등급',
+      capacity: '81명',
+      currentM: '6', currentF: '73',
+      waitingM: '15', waitingF: '13',
+      available: '2명',
+      staff: '의사 2명 · 간호사 7명 · 조무사 4명',
+      physicalTherapy: '미확인',
+      cost: '홈페이지 참고',
+      costPhoto: '',
+      extraCostPhoto: '',
+      programPhoto: '',
+      note: ''
+    }];
+    await save();
+  }
+  render();
+}
+
+async function save() {
+  try {
+    if (window.storage && typeof window.storage.set === 'function') {
+      await window.storage.set(STORAGE_KEY, JSON.stringify(facilities), true);
+    } else {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(facilities));
+    }
+  } catch (e) {
+    console.error('save failed', e);
+  }
+}
+
+function factRow(n, label, value, opts = {}) {
+  return `
+    <div class="fact">
+      <div class="num">${n}</div>
+      <div class="ftext">
+        <div class="flabel">${label}</div>
+        <div class="fvalue ${opts.strong ? 'strong' : ''}">${value}</div>
+      </div>
+      ${opts.badge ? `<span class="fact-badge ${opts.badgeClass}">${opts.badge}</span>` : ''}
+    </div>
+  `;
+}
+
+function render() {
+  const strip = document.getElementById('strip');
+  const cards = document.getElementById('cards');
+
+  if (facilities.length === 0) {
+    strip.innerHTML = '';
+    cards.innerHTML = '<div class="empty">아직 등록된 후보가 없어요.<br>위의 "+ 후보 추가" 버튼으로 첫 후보를 넣어보세요.</div>';
+    return;
+  }
+
+  strip.innerHTML = facilities.map(f => `
+    <div class="chip" onclick="document.getElementById('card-${f.id}').scrollIntoView({behavior:'smooth', block:'center'})">
+      <div class="name">${esc(f.name)}</div>
+      <div class="avail">입소가능 <b>${esc(f.available || '-')}</b></div>
+    </div>
+  `).join('');
+
+  cards.innerHTML = facilities.map(f => `
+    <div class="card" id="card-${f.id}">
+      <div class="card-head" role="button" tabindex="0" aria-expanded="true"
+           aria-controls="body-${f.id}"
+           onclick="toggleCard('${f.id}')"
+           onkeydown="handleCardKey(event, '${f.id}')">
+        <div class="card-head-main">
+          <div class="fname">${esc(f.name)}</div>
+          <div class="floc">${esc(f.location || '위치 미입력')}${f.website ? ' · <span class="flink"><a href="'+esc(fullUrl(f.website))+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">'+esc(f.website)+'</a></span>' : ''}</div>
+        </div>
+        <div class="card-head-side">
+          <span class="pill">입소가능 ${esc(f.available || '-')}</span>
+          <span class="collapse-icon" aria-hidden="true">⌄</span>
+        </div>
+      </div>
+      <div class="card-body" id="body-${f.id}">
+        ${f.gradeHistory ? `<div class="grade-history">평가등급 이력 · ${esc(f.gradeHistory)}</div>` : ''}
+        <div class="fact-list">
+          ${factRow(1, '평가등급', gradeLabel(f.latestGrade), { badge: gradeLabel(f.latestGrade), badgeClass: gradeClass(f.latestGrade) })}
+          ${factRow(2, '정원 / 현원', `정원 ${esc(f.capacity||'-')} · 현원 남 ${esc(f.currentM||'-')} / 여 ${esc(f.currentF||'-')}`)}
+          ${factRow(3, '대기인원', `남 ${esc(f.waitingM||'-')} / 여 ${esc(f.waitingF||'-')}`)}
+          ${factRow(4, '인력현황', esc(f.staff || '-'))}
+          ${factRow(5, '물리치료', ptLabel(f.physicalTherapy))}
+          ${factRow(6, '비용', esc(f.cost || '-'))}
+        </div>
+        ${(f.costPhoto || f.extraCostPhoto || f.programPhoto) ? `
+          <div class="photo-gallery">
+            ${f.costPhoto ? `<div class="info-photo"><div class="info-photo-title">비용 안내</div><img src="${f.costPhoto}" onclick="openLightbox('${f.id}', 'costPhoto')" alt="비용 안내 사진"></div>` : ''}
+            ${f.extraCostPhoto ? `<div class="info-photo"><div class="info-photo-title">비급여비용</div><img src="${f.extraCostPhoto}" onclick="openLightbox('${f.id}', 'extraCostPhoto')" alt="비급여비용 안내 사진"></div>` : ''}
+            ${f.programPhoto ? `<div class="info-photo"><div class="info-photo-title">프로그램 운영</div><img src="${f.programPhoto}" onclick="openLightbox('${f.id}', 'programPhoto')" alt="프로그램 운영 사진"></div>` : ''}
+          </div>
+        ` : ''}
+        ${f.note ? `<div class="note-box">${esc(f.note)}</div>` : ''}
+        <div class="card-tools">
+          <button onclick="openForm('${f.id}')">수정</button>
+          <button onclick="removeFacility('${f.id}')">삭제</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleCard(id) {
+  const card = document.getElementById('card-' + id);
+  if (!card) return;
+  const collapsed = card.classList.toggle('collapsed');
+  card.querySelector('.card-head').setAttribute('aria-expanded', String(!collapsed));
+}
+
+function handleCardKey(event, id) {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    toggleCard(id);
+  }
+}
+
+function openLightbox(id, photoKey) {
+  const f = facilities.find(x => x.id === id);
+  const photo = f && f[photoKey];
+  if (!photo) return;
+  const box = document.createElement('div');
+  box.className = 'lightbox';
+  box.onclick = () => box.remove();
+  box.innerHTML = `<img src="${photo}" alt="확대 사진">`;
+  document.body.appendChild(box);
+}
+
+function resizeImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxW = 900;
+        const scale = Math.min(1, maxW / img.width);
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.72));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function openForm(id) {
+  editingId = id || null;
+  const f = id ? facilities.find(x => x.id === id) : {};
+  pendingPhotos = {
+    costPhoto: f.costPhoto || '',
+    extraCostPhoto: f.extraCostPhoto || '',
+    programPhoto: f.programPhoto || ''
+  };
+  const root = document.getElementById('modal-root');
+  root.innerHTML = `
+    <div class="modal-back">
+      <div class="modal">
+        <h2>${id ? '후보 수정' : '후보 추가'}</h2>
+        <div class="field"><label>시설명</label><input id="f-name" value="${esc(f.name)}" placeholder="예: 너싱홀그린힐"></div>
+        <div class="two-col">
+          <div class="field"><label>위치 / 거리</label><input id="f-location" value="${esc(f.location)}" placeholder="집에서 차로 10분"></div>
+          <div class="field"><label>홈페이지</label><input id="f-website" value="${esc(f.website)}" placeholder="example.com"></div>
+        </div>
+        <div class="two-col">
+          <div class="field"><label>최신 평가등급</label>
+            <select id="f-grade">
+              ${['미평가','A','B','C','D','E'].map(g => `<option value="${g}" ${f.latestGrade===g?'selected':''}>${g==='미평가'?'미평가':g+'등급'}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field"><label>물리치료 가능 여부</label>
+            <select id="f-pt">
+              ${['미확인','가능','불가'].map(v => `<option value="${v}" ${f.physicalTherapy===v?'selected':''}>${v}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="field"><label>평가등급 이력 (선택)</label><input id="f-gradehistory" value="${esc(f.gradeHistory)}" placeholder="2021 A등급 → 2025 B등급"></div>
+        <div class="field"><label>정원</label><input id="f-capacity" value="${esc(f.capacity)}" placeholder="81명"></div>
+        <div class="two-col">
+          <div class="field"><label>현원 (남)</label><input id="f-currentm" value="${esc(f.currentM)}" placeholder="6"></div>
+          <div class="field"><label>현원 (여)</label><input id="f-currentf" value="${esc(f.currentF)}" placeholder="73"></div>
+        </div>
+        <div class="two-col">
+          <div class="field"><label>대기인원 (남)</label><input id="f-waitm" value="${esc(f.waitingM)}" placeholder="15"></div>
+          <div class="field"><label>대기인원 (여)</label><input id="f-waitf" value="${esc(f.waitingF)}" placeholder="13"></div>
+        </div>
+        <div class="field"><label>입소가능인원</label><input id="f-available" value="${esc(f.available)}" placeholder="2명"></div>
+        <div class="field"><label>인력현황</label><input id="f-staff" value="${esc(f.staff)}" placeholder="의사 2명 · 간호사 7명 · 조무사 4명"></div>
+        <div class="field"><label>비용</label><input id="f-cost" value="${esc(f.cost)}" placeholder="홈페이지 참고 / 월 000만원"></div>
+        <div class="field">
+          <label>비용 안내 사진 (선택)</label>
+          <input type="file" id="f-photo-cost" accept="image/*">
+          <div class="photo-preview" id="photo-preview-cost">${photoPreviewHtml('costPhoto')}</div>
+        </div>
+        <div class="field">
+          <label>비급여비용 사진 (선택)</label>
+          <input type="file" id="f-photo-extra" accept="image/*">
+          <div class="photo-preview" id="photo-preview-extra">${photoPreviewHtml('extraCostPhoto')}</div>
+        </div>
+        <div class="field">
+          <label>프로그램 운영 사진 (선택)</label>
+          <input type="file" id="f-photo-program" accept="image/*">
+          <div class="photo-preview" id="photo-preview-program">${photoPreviewHtml('programPhoto')}</div>
+        </div>
+        <div class="field"><label>특이사항 / 고모 의견</label><textarea id="f-note" placeholder="방문 후기, 고모 의견 등">${esc(f.note)}</textarea></div>
+        <div class="modal-actions">
+          <button onclick="closeForm()">취소</button>
+          <button class="btn-primary" onclick="submitForm()">저장</button>
+        </div>
+      </div>
+    </div>
+  `;
+  bindPhotoInput('f-photo-cost', 'photo-preview-cost', 'costPhoto');
+  bindPhotoInput('f-photo-extra', 'photo-preview-extra', 'extraCostPhoto');
+  bindPhotoInput('f-photo-program', 'photo-preview-program', 'programPhoto');
+}
+
+function photoPreviewHtml(key) {
+  return pendingPhotos[key]
+    ? `<img src="${pendingPhotos[key]}"><br><button type="button" class="photo-clear" onclick="clearPhoto('${key}')">사진 지우기</button>`
+    : '';
+}
+
+function bindPhotoInput(inputId, previewId, key) {
+  document.getElementById(inputId).addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    pendingPhotos[key] = await resizeImage(file);
+    document.getElementById(previewId).innerHTML = photoPreviewHtml(key);
+  });
+}
+
+function clearPhoto(key) {
+  const map = {
+    costPhoto: ['f-photo-cost', 'photo-preview-cost'],
+    extraCostPhoto: ['f-photo-extra', 'photo-preview-extra'],
+    programPhoto: ['f-photo-program', 'photo-preview-program']
+  };
+  pendingPhotos[key] = '';
+  document.getElementById(map[key][1]).innerHTML = '';
+  document.getElementById(map[key][0]).value = '';
+}
+
+function closeForm() {
+  editingId = null;
+  pendingPhotos = {};
+  document.getElementById('modal-root').innerHTML = '';
+}
+
+async function submitForm() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { document.getElementById('f-name').focus(); return; }
+  const data = {
+    name,
+    location: document.getElementById('f-location').value.trim(),
+    website: document.getElementById('f-website').value.trim(),
+    latestGrade: document.getElementById('f-grade').value,
+    physicalTherapy: document.getElementById('f-pt').value,
+    gradeHistory: document.getElementById('f-gradehistory').value.trim(),
+    capacity: document.getElementById('f-capacity').value.trim(),
+    currentM: document.getElementById('f-currentm').value.trim(),
+    currentF: document.getElementById('f-currentf').value.trim(),
+    waitingM: document.getElementById('f-waitm').value.trim(),
+    waitingF: document.getElementById('f-waitf').value.trim(),
+    available: document.getElementById('f-available').value.trim(),
+    staff: document.getElementById('f-staff').value.trim(),
+    cost: document.getElementById('f-cost').value.trim(),
+    costPhoto: pendingPhotos.costPhoto || '',
+    extraCostPhoto: pendingPhotos.extraCostPhoto || '',
+    programPhoto: pendingPhotos.programPhoto || '',
+    note: document.getElementById('f-note').value.trim(),
+  };
+  if (editingId) {
+    const idx = facilities.findIndex(x => x.id === editingId);
+    if (idx > -1) facilities[idx] = { ...facilities[idx], ...data };
+  } else {
+    facilities.push({ id: 'f-' + Date.now(), ...data });
+  }
+  await save();
+  closeForm();
+  render();
+}
+
+async function removeFacility(id) {
+  facilities = facilities.filter(x => x.id !== id);
+  await save();
+  render();
+}
+
+document.getElementById('add-btn').addEventListener('click', () => openForm(null));
+
+load();
+</script>
+</body>
+</html>
