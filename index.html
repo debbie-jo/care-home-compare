@@ -270,6 +270,8 @@
     font-size: 13px;
     margin-top: 12px;
     color: var(--navy-deep);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
   }
   .card-tools { display: flex; gap: 6px; justify-content: flex-end; margin-top: 14px; }
   .card-tools button { padding: 6px 12px; font-size: 12px; }
@@ -584,7 +586,7 @@ function render() {
           ${factRow(1, '평가등급', gradeLabel(f.latestGrade), { badge: gradeLabel(f.latestGrade), badgeClass: gradeClass(f.latestGrade) })}
           ${factRow(2, '정원 / 현원', `정원 ${esc(f.capacity||'-')} · 현원 남 ${esc(f.currentM||'-')} / 여 ${esc(f.currentF||'-')}`)}
           ${factRow(3, '대기인원', `남 ${esc(f.waitingM||'-')} / 여 ${esc(f.waitingF||'-')}`)}
-          ${factRow(4, '인력현황', esc(f.staff || '-'))}
+          ${factRow(4, '인력현황', esc(f.staff || '-'), f.caregiverRatio ? { badge: esc(f.caregiverRatio), badgeClass: 'g-none' } : {})}
           ${factRow(5, '물리치료', ptLabel(f.physicalTherapy))}
           ${factRow(6, '비용', esc(f.cost || '-'))}
         </div>
@@ -695,7 +697,10 @@ function openForm(id) {
           <div class="field"><label>대기인원 (여)</label><input id="f-waitf" value="${esc(f.waitingF)}" placeholder="13"></div>
         </div>
         <div class="field"><label>입소가능인원</label><input id="f-available" value="${esc(f.available)}" placeholder="2명"></div>
-        <div class="field"><label>인력현황</label><input id="f-staff" value="${esc(f.staff)}" placeholder="의사 2명 · 간호사 7명 · 조무사 4명"></div>
+        <div class="two-col">
+          <div class="field"><label>인력현황</label><input id="f-staff" value="${esc(f.staff)}" placeholder="의사 2명 · 간호사 7명 · 조무사 4명"></div>
+          <div class="field"><label>요양보호사 배치</label><input id="f-caregiver-ratio" value="${esc(f.caregiverRatio)}" placeholder="환자 2.3명당 요양보호사 1명"></div>
+        </div>
         <div class="field"><label>비용</label><input id="f-cost" value="${esc(f.cost)}" placeholder="홈페이지 참고 / 월 000만원"></div>
         <div class="field">
           <label>비용 안내 사진 (선택)</label>
@@ -803,6 +808,7 @@ async function submitForm() {
     waitingF: document.getElementById('f-waitf').value.trim(),
     available: document.getElementById('f-available').value.trim(),
     staff: document.getElementById('f-staff').value.trim(),
+    caregiverRatio: document.getElementById('f-caregiver-ratio').value.trim(),
     cost: document.getElementById('f-cost').value.trim(),
     costPhoto: normalizePhotos(pendingPhotos.costPhoto),
     extraCostPhoto: normalizePhotos(pendingPhotos.extraCostPhoto),
